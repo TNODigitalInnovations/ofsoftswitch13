@@ -179,7 +179,7 @@ static int
 parse16(char *str, struct names16 *names, size_t names_num, uint16_t max, uint16_t *val);
 
 static int
-parse16m(char *str, struct names16 *names, size_t names_num, uint16_t max, uint16_t *val, uint16_t *mask);
+parse16m(char *str, struct names16 *names, size_t names_num, uint16_t max, uint16_t *val, uint16_t *mask) UNUSED;
 
 static int
 parse32(char *str, struct names32 *names, size_t names_num, uint32_t max, uint32_t *val);
@@ -1896,6 +1896,19 @@ parse_set_field(char *token, struct ofl_action_set_field *act) {
                 act->field = (struct ofl_match_tlv*) malloc(sizeof(struct ofl_match_tlv));
                 act->field->header = OXM_OF_IPV6_FLABEL;
                 act->field->value = (uint8_t*) ipv6_label;
+        }
+        return 0;
+    }
+    /* Tunnel ID */
+    if (strncmp(token, MATCH_TUNNEL_ID KEY_VAL2, strlen(MATCH_TUNNEL_ID KEY_VAL2)) == 0) {
+        uint64_t *tunn_id = malloc(sizeof(uint64_t));
+        if (sscanf(token, MATCH_TUNNEL_ID KEY_VAL2 "0x%"SCNx64"", (tunn_id)) != 1) {
+            ofp_fatal(0, "Error parsing %s: %s.", MATCH_TUNNEL_ID, token);
+        }
+        else {
+            act->field = (struct ofl_match_tlv*) malloc(sizeof(struct ofl_match_tlv));
+            act->field->header = OXM_OF_TUNNEL_ID;
+            act->field->value = (uint8_t*) tunn_id;
         }
         return 0;
     }

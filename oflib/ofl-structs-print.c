@@ -404,15 +404,15 @@ ofl_structs_oxm_tlv_print(FILE *stream, struct ofl_match_tlv *f)
 			}
 			break;
 		case OFPXMT_OFB_PBB_ISID   :
-			fprintf(stream, "pbb_isid=\"%x%x%x\"", f->value[0],f->value[1], f->value[2]);
+			fprintf(stream, "pbb_isid=\"%d\"", *((uint32_t*) f->value));
 			if (OXM_HASMASK(f->header)) {
 				fprintf(stream, ", pbb_isid_mask=\"%x%x%x\"", (f->value+4)[0], (f->value+4)[1], (f->value+4)[2]);
 			}
 			break;
 		case OFPXMT_OFB_TUNNEL_ID:
-			fprintf(stream, "tunnel_id=\"%"PRIu64"\"", *((uint64_t*) f->value));
+			fprintf(stream, "tunnel_id=\"0x%"PRIx64"\"", *((uint64_t*) f->value));
 			if (OXM_HASMASK(f->header)) {
-				fprintf(stream, ", tunnel_id_mask=\"%"PRIu64"\"", *((uint64_t*)(f->value+8)));
+				fprintf(stream, ", tunnel_id_mask=\"0x%"PRIx64"\"", *((uint64_t*)(f->value+8)));
 			}
 			break;
 		case OFPXMT_OFB_IPV6_EXTHDR:
@@ -530,15 +530,17 @@ ofl_structs_queue_prop_print(FILE *stream, struct ofl_queue_prop_header *p) {
         case (OFPQT_MIN_RATE): {
             struct ofl_queue_prop_min_rate *pm = (struct ofl_queue_prop_min_rate *)p;
 
-            fprintf(stream, "{rate=\"%u\"}", pm->rate);
+            fprintf(stream, "{min rate=\"%u\"}", pm->rate);
             break;
         }
         case (OFPQT_MAX_RATE): {
-        	break;
+            struct ofl_queue_prop_max_rate *pm = (struct ofl_queue_prop_max_rate *)p;
+
+            fprintf(stream, "{max rate=\"%u\"}", pm->rate);
+            break;
         }
-        case (OFPQT_EXPERIMENTER): {
+        case (OFPQT_EXPERIMENTER):
         	break;
-        }
     }
 }
 
@@ -867,7 +869,7 @@ ofl_structs_table_features_print(FILE *stream, struct ofl_table_features *s){
     fprintf(stream, "{table=\"");
     ofl_table_print(stream, s->table_id);  
     fprintf(stream, "\", name=\"%s\", "
-                          "metadata_match=\"%"PRIx64"\", metadata_write=\"%"PRIx64"\", config=\"%"PRIu32"\"," 
+                          "metadata_match=\"0x%"PRIx64"\", metadata_write=\"0x%"PRIx64"\", config=\"%"PRIu32"\"," 
                           "max_entries=\"%"PRIu32"\"",
                   s->name, s->metadata_match, s->metadata_write, s->config, s->max_entries);      
     for(i =0; i < s->properties_num; i++){

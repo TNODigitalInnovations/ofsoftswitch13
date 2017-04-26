@@ -10,6 +10,14 @@ This was forked then by: [czivar](https://github.com/czivar/ofsoftswitch13) who
 added support for BPF filtering.
 This was forked by Borgert to add eBPF support here: [b0rg3rt](https://github.com/b0rg3rt/ofsoftswitch13).
 Now this project is migrated from Github to ci.tno.nl to work on new functionality.
+**UPDATE**: A new experimental branch with contributions from the [BEBA EU Project][beba-eu] is available with lots of performance improvements and OpenFlow extensions. If you want to try the code checkout to the BEBA-EU branch.
+
+    ```
+    $ git checkout remotes/origin/BEBA-EU
+    ```   
+
+**Important notice:**  Despite the fact the switch is still popular for adventurers trying to implement own changes to OpenFlow, support  now is on a best-effort base. Currently, there are lots of complaints about performance degradation, broken features and installation problems. Although not confirmed, most of the problems seem to be due to most recent linux versions. As the main contributor of the switch, I would like to keep the project alive and fix all the recurrent issues. However, life moves and new projects come, resulting in no time to work on it. I am still happy to help anyone who comes asking for advice on how to make changes in the code, but I cannot guarantee quick and active replies.  
+ *-Eder*
 
 The following components are available in this package:
 * `ofdatapath`: the switch implementation
@@ -136,8 +144,8 @@ code from the original Stanford switch).
 
 # Acknowledgments
 
-This project is supported by Ericsson Innovation Center in Brazil.
-Maintained by CPqD in technical collaboration with Ericsson Research.
+This project was supported by Ericsson Innovation Center in Brazil.
+Formerly maintained by CPqD in technical collaboration with Ericsson Research.
 
 **Contributions:**
 
@@ -166,3 +174,4 @@ E-mail: Eder Leao Fernandes (ederleaofernandes at gmail . com)
 [ofp13]: https://www.opennetworking.org/images/stories/downloads/specification/openflow-spec-v1.3.0.pdf
 [ericssonsw11]: https://github.com/TrafficLab/of11softswitch
 [compileubuntu14]: http://tocai.dia.uniroma3.it/compunet-wiki/index.php/Installing_and_setting_up_OpenFlow_tools
+[beba-eu]: http://www.beba-project.eu/ 

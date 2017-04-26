@@ -166,8 +166,10 @@ dp_new(void) {
     if(strlen(dp->dp_desc) == 0) {
         /* just use "$HOSTNAME pid=$$" */
         char hostnametmp[DESC_STR_LEN];
+        char pid[10];
         gethostname(hostnametmp,sizeof hostnametmp);
-        snprintf(dp->dp_desc, sizeof dp->dp_desc,"%s pid=%u",hostnametmp, getpid());
+        sprintf(pid, "%u", getpid());
+        snprintf(dp->dp_desc, strlen(hostnametmp) + 5 + strlen(pid),"%s pid=%s",hostnametmp, pid);
     }
 
     /* FIXME: Should not depend on udatapath_as_lib */
@@ -280,11 +282,9 @@ remote_rconn_run(struct datapath *dp, struct remote *r, uint8_t conn_id) {
 
                 struct sender sender = {.remote = r, .conn_id = conn_id};
 
-                // This functions does the saving of the received flow in msg struct.
                 error = ofl_msg_unpack(buffer->data, buffer->size, &msg, &(sender.xid), dp->exp);
 
                 if (!error) {
-                    /* This function then adds the flow to the flow table. */
                     error = handle_control_msg(dp, msg, &sender);
 
                     if (error) {
@@ -346,9 +346,9 @@ remote_destroy(struct remote *r)
             rconn_destroy(r->rconn_aux);
         }
         rconn_destroy(r->rconn);
-    if(r->mp_req_msg != NULL) {
-      ofl_msg_free((struct ofl_msg_header *) r->mp_req_msg, NULL);
-    }
+	if(r->mp_req_msg != NULL) {
+	  ofl_msg_free((struct ofl_msg_header *) r->mp_req_msg, NULL);
+	}
         free(r);
     }
 }

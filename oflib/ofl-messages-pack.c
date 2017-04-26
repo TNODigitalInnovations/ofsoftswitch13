@@ -365,9 +365,9 @@ ofl_msg_pack_async_config(struct ofl_msg_async_config *msg, uint8_t **buf, size_
 
     ac = (struct ofp_async_config*)(*buf);
     for(i = 0; i < 2; i++){
-        ac->packet_in_mask[i] = msg->config->packet_in_mask[i];
-        ac->port_status_mask[i] = msg->config->port_status_mask[i];
-        ac->flow_removed_mask[i] =  msg->config->flow_removed_mask[i];
+        ac->packet_in_mask[i] = htonl(msg->config->packet_in_mask[i]);
+        ac->port_status_mask[i] = htonl(msg->config->port_status_mask[i]);
+        ac->flow_removed_mask[i] =  htonl(msg->config->flow_removed_mask[i]);
     }
     return 0;
 }
@@ -732,13 +732,13 @@ ofl_msg_pack_multipart_reply_group_desc(struct ofl_msg_multipart_reply_group_des
 static int
 ofl_msg_pack_multipart_reply_group_features(struct ofl_msg_multipart_reply_group_features *msg, uint8_t **buf, size_t *buf_len) {
    struct ofp_multipart_reply *resp;
-    struct ofp_group_features_stats *stats;
+    struct ofp_group_features *stats;
     int i;
-    *buf_len = sizeof(struct ofp_multipart_reply) + sizeof(struct ofp_group_features_stats);
+    *buf_len = sizeof(struct ofp_multipart_reply) + sizeof(struct ofp_group_features);
     *buf     = (uint8_t *)malloc(*buf_len);
 
     resp = (struct ofp_multipart_reply *)(*buf);
-    stats = (struct ofp_group_features_stats *)resp->body;
+    stats = (struct ofp_group_features *)resp->body;
     stats->types = htonl(msg->types);
     stats->capabilities = htonl(msg->capabilities);
     for(i = 0; i < 4; i++){

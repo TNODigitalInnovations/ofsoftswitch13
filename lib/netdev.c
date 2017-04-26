@@ -71,6 +71,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <inttypes.h>
+#include <linux/rtnetlink.h>
 #include <linux/if_tun.h>
 #include <linux/if_packet.h>
 
@@ -96,7 +97,6 @@
 #endif
 
 #include <linux/ethtool.h>
-#include <linux/rtnetlink.h>
 #include <linux/sockios.h>
 #include <linux/version.h>
 #include <sys/types.h>
@@ -121,6 +121,7 @@
 #include "socket-util.h"
 #include "svec.h"
 
+
 /* linux/if.h defines IFF_LOWER_UP, net/if.h doesn't.
  * net/if.h defines if_nameindex(), linux/if.h doesn't.
  * We can't include both headers, so define IFF_LOWER_UP ourselves. */
@@ -140,6 +141,8 @@ struct netdev {
     int netdev_fd;              /* Network device. */
     int tap_fd;                 /* TAP character device, if any, otherwise the
                                  * network device. */
+
+    int netlink_fd;
 
     /* one socket per queue.These are valid only for ordinary network devices*/
     int queue_fd[NETDEV_MAX_QUEUES + 1];
@@ -448,10 +451,13 @@ static int
 do_remove_qdisc(const char *netdev_name)
 {
     char command[1024];
-
+    int error;
     snprintf(command, sizeof(command), COMMAND_DEL_DEV_QDISC, netdev_name);
-    system(command);
-
+    error = system(command);
+    if (error) {
+        VLOG_WARN(LOG_MODULE, "Problem configuring qdisc for device %s",netdev_name);
+        return error;
+    }
     /* There is no need for a device to already be configured. Therefore no
      * need to indicate any error */
     return 0;
@@ -721,7 +727,9 @@ do_open_netdev(const char *name, int ethertype, int tap_fd,
                struct netdev **netdev_)
 {
     int netdev_fd;
+    int netlink_fd;
     struct sockaddr_ll sll;
+    struct sockaddr_nl snl;
     struct ifreq ifr;
     unsigned int ifindex;
     uint8_t etheraddr[ETH_ADDR_LEN];
@@ -732,9 +740,21 @@ do_open_netdev(const char *name, int ethertype, int tap_fd,
     int error;
     struct netdev *netdev;
     uint32_t val;
-
     init_netdev();
     *netdev_ = NULL;
+    netdev_fd = -1;
+
+    netlink_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+
+    if (netlink_fd < 0) {
+        return errno;
+    }
+
+    /* Set non-blocking mode. */
+    error = set_nonblocking(netlink_fd);
+    if (error) {
+        goto error_already_set;
+    }
 
     /* Create raw socket. */
     netdev_fd = socket(PF_PACKET, SOCK_RAW,
@@ -745,20 +765,29 @@ do_open_netdev(const char *name, int ethertype, int tap_fd,
     if (netdev_fd < 0) {
         return errno;
     }
-  #ifdef HAVE_PACKET_AUXDATA
+    #ifdef HAVE_PACKET_AUXDATA
         val = 1;
-          if (setsockopt(netdev_fd, SOL_PACKET, PACKET_AUXDATA, &val,
+        if (setsockopt(netdev_fd, SOL_PACKET, PACKET_AUXDATA, &val,
                sizeof val) == -1 && errno != ENOPROTOOPT){
-              VLOG_ERR(LOG_MODULE, "setsockopt(SO_RCVBUF,%"PRIu32"): %s", val, strerror(errno));
-          }
-  #endif
-
+            VLOG_ERR(LOG_MODULE, "setsockopt(SO_RCVBUF,%"PRIu32"): %s", val, 
+                strerror(errno));
+        }
+    #endif
+        
     /* Set non-blocking mode. */
     error = set_nonblocking(netdev_fd);
     if (error) {
         goto error_already_set;
     }
 
+    memset (&snl,0,sizeof(snl));
+    snl.nl_family = AF_NETLINK;
+    snl.nl_groups =  RTMGRP_LINK;
+
+    if (bind(netlink_fd, (struct sockaddr *)&snl, sizeof(snl)) < 0){
+        VLOG_ERR(LOG_MODULE, "netlink bind to %s failed: %s", name, strerror(errno));
+        goto error;
+    }
     /* Get ethernet device index. */
     strncpy(ifr.ifr_name, name, sizeof ifr.ifr_name);
     if (ioctl(netdev_fd, SIOCGIFINDEX, &ifr) < 0) {
@@ -826,6 +855,7 @@ do_open_netdev(const char *name, int ethertype, int tap_fd,
     netdev->txqlen = txqlen;
     netdev->hwaddr_family = hwaddr_family;
     netdev->netdev_fd = netdev_fd;
+    netdev->netlink_fd = netlink_fd;
     netdev->tap_fd = tap_fd < 0 ? netdev_fd : tap_fd;
     netdev->queue_fd[0] = netdev->tap_fd;
     memcpy(netdev->etheraddr, etheraddr, sizeof etheraddr);
@@ -896,11 +926,45 @@ netdev_close(struct netdev *netdev)
 /* Pads 'buffer' out with zero-bytes to the minimum valid length of an
  * Ethernet packet, if necessary.  */
 static void
-pad_to_minimum_length(struct ofpbuf *buffer)
+pad_to_minimum_length(struct ofpbuf *buffer) 
 {
     if (buffer->size < ETH_TOTAL_MIN) {
         ofpbuf_put_zeros(buffer, ETH_TOTAL_MIN - buffer->size);
     }
+}
+
+int
+netdev_link_state(struct netdev *netdev)
+{
+     int len;
+     char buff[4096];
+     struct nlmsghdr *nlm;
+     struct ifinfomsg *ifa;
+     enum netdev_flags flags;
+     nlm = (struct nlmsghdr *)buff;
+     do
+     {
+        len = recv (netdev->netlink_fd,nlm,4096,0);
+        for (;(NLMSG_OK (nlm, len)) && (nlm->nlmsg_type != NLMSG_DONE); nlm = NLMSG_NEXT(nlm, len))
+         {
+             if (nlm->nlmsg_type != RTM_NEWLINK)
+                continue;
+             ifa = (struct ifinfomsg *) NLMSG_DATA (nlm);
+             if (ifa->ifi_index == netdev->ifindex){
+                 if (ifa->ifi_flags & IFF_UP){
+                     netdev_nodev_get_flags(netdev->name, &flags);
+                     netdev_set_flags(netdev, flags, false);
+                     return NETDEV_LINK_UP;
+                 }
+                 else {
+                     netdev_nodev_get_flags(netdev->name, &flags);
+                     netdev_set_flags(netdev, flags, false);
+                     return NETDEV_LINK_DOWN;
+                 }
+	     }
+         }
+     } while (len < 0 && errno == EINTR);
+     return NETDEV_LINK_NO_CHANGE;
 }
 
 /* Attempts to receive a packet from 'netdev' into 'buffer', which the caller
@@ -916,9 +980,8 @@ pad_to_minimum_length(struct ofpbuf *buffer)
  * be returned.
  */
 int
-netdev_recv(struct netdev *netdev, struct ofpbuf *buffer)
+netdev_recv(struct netdev *netdev, struct ofpbuf *buffer, size_t max_mtu)
 {
-
 #ifdef HAVE_PACKET_AUXDATA
     /* Code from libpcap to reconstruct VLAN header */
     struct iovec    iov;
@@ -951,7 +1014,7 @@ netdev_recv(struct netdev *netdev, struct ofpbuf *buffer)
     msg.msg_controllen  = sizeof(cmsg_buf);
     msg.msg_flags   = 0;
 
-    iov.iov_len   = buffer->allocated;
+    iov.iov_len   = max_mtu;
     iov.iov_base    = buffer->data;
 
 #else
@@ -976,7 +1039,6 @@ netdev_recv(struct netdev *netdev, struct ofpbuf *buffer)
             n_bytes = recvfrom(netdev->tap_fd, ofpbuf_tail(buffer),
                                (ssize_t)ofpbuf_tailroom(buffer), 0,
                                (struct sockaddr *)&sll, &sll_len);
-
 #endif /* ifdef HAVE_PACKET_AUXDATA  */
         } while (n_bytes < 0 && errno == EINTR);
     }
@@ -1002,8 +1064,9 @@ netdev_recv(struct netdev *netdev, struct ofpbuf *buffer)
                     continue;
                 }
                 aux = (struct tpacket_auxdata *)CMSG_DATA(cmsg);
-                if (aux->tp_vlan_tci == 0)
+                if (aux->tp_vlan_tci == 0){
                   continue;
+                }
                 /* VLAN tag found. Shift MAC addresses down and insert VLAN tag */
                 /* Create headroom for the VLAN tag */
                 eth_type = ntohs(*((uint16_t *)(buffer->data + ETHER_ADDR_LEN * 2)));                
@@ -1028,14 +1091,13 @@ netdev_recv(struct netdev *netdev, struct ofpbuf *buffer)
             return EAGAIN;
         }
         buffer->size += n_bytes;
-
+#endif
         /* When the kernel internally sends out an Ethernet frame on an
          * interface, it gives us a copy *before* padding the frame to the
          * minimum length.  Thus, when it sends out something like an ARP
          * request, we see a too-short frame.  So pad it out to the minimum
          * length. */
         pad_to_minimum_length(buffer);
-#endif
         return 0;
     }
 
@@ -1085,7 +1147,6 @@ netdev_send(struct netdev *netdev, const struct ofpbuf *buffer,
     do {
         n_bytes = write(netdev->queue_fd[class_id], buffer->data, buffer->size);
     } while (n_bytes < 0 && errno == EINTR);
-
     if (n_bytes < 0) {
         /* The Linux AF_PACKET implementation never blocks waiting for room
          * for packets, instead returning ENOBUFS.  Translate this into EAGAIN
