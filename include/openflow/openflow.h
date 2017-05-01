@@ -899,6 +899,11 @@ enum ofp_vlan_id {
 #define OXM_OF_IPV6_EXTHDR   OXM_HEADER  (0x8000, OFPXMT_OFB_IPV6_EXTHDR, 2)
 #define OXM_OF_IPV6_EXTHDR_W OXM_HEADER_W(0x8000, OFPXMT_OFB_IPV6_EXTHDR, 2)
 
+/* ANY MATCH */
+#define OXM_OF_ANY_MATCH  OXM_HEADER  (0x8000, OFPXMT_OFB_ANY_MATCH, 248)
+#define OXM_OF_EXEC_BPF   OXM_HEADER  (0x8000, OFPXMT_OFB_EXEC_BPF, 248)
+
+
 /* Bit definitions for IPv6 Extension Header pseudo-field. */
 enum ofp_ipv6exthdr_flags {      
     OFPIEH_NONEXT = 1 << 0,     /* "No next header" encountered. */

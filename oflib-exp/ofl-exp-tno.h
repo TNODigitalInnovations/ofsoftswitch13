@@ -11,8 +11,15 @@
 #include "../oflib/ofl-structs.h"
 #include "../oflib/ofl-messages.h"
 
+
+/**
+ * struct ofl_msg_experimenter {
+ *   struct ofl_msg_header  header;             // OFPT_EXPERIMENTER
+ *   uint32_t               experimenter_id;
+ * };
+ */
 struct ofl_exp_tno_msg_header {
-    struct ofl_msg_experimenter   header; /* TNO_VENDOR_ID */
+    struct ofl_msg_experimenter header; /* NX_VENDOR_ID */
     uint32_t   type;
 };
 
@@ -36,19 +43,26 @@ struct ofl_tno_bpf_put_header {
     uint8_t program[0];
 };
 
-
-
 struct ofl_exp_tno_msg_del_bpf {
     struct ofl_exp_tno_msg_header   header;
     uint32_t                  		prog_id;
 };
 
+/**
+ * This function packs a TNO experimenter structure to a Openflow wireformat.
+ */
 int
 ofl_exp_tno_msg_pack(struct ofl_msg_experimenter *msg, uint8_t **buf, size_t *buf_len);
 
+/**
+ * This function unpacks the OpenFow wireformat to OUR own defined (TNO) experimenter structure.
+ */
 ofl_err
 ofl_exp_tno_msg_unpack(struct ofp_header *oh, size_t *len, struct ofl_msg_experimenter **msg);
 
+/**
+ * The free function only frees the TNO experimenter structure
+ */
 int
 ofl_exp_tno_msg_free(struct ofl_msg_experimenter *msg);
 

@@ -235,6 +235,7 @@ void
 ofl_structs_oxm_tlv_print(FILE *stream, struct ofl_match_tlv *f)
 {
 	uint8_t field = OXM_FIELD(f->header);
+	struct ofl_oxm_bpf_match *bpf_match;
 
 	switch (field) {
 
@@ -428,7 +429,7 @@ ofl_structs_oxm_tlv_print(FILE *stream, struct ofl_match_tlv *f)
 			break;
 		case OFPXMT_OFB_EXEC_BPF:
 			;
-			struct ofl_oxm_bpf_match *bpf_match;
+
 			bpf_match = (struct ofl_oxm_bpf_match*)f->value;
 
 			fprintf(stream, "bpf_program=\"%d\"", bpf_match->bpf_prog_num);

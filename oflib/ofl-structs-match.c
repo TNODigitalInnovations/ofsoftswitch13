@@ -170,6 +170,7 @@ ofl_structs_match_put_execBpf(struct ofl_match *match, uint32_t header, uint32_t
 {
     struct ofl_match_tlv *m = malloc(sizeof (struct ofl_match_tlv));
     int len = sizeof(uint32_t) + 2*sizeof(uint64_t) +sizeof(uint8_t) + param_len;
+    uint8_t * param_len_ptr = 0;
 
     VLOG_WARN_RL(LOG_MODULE, &rl, "Executing: ofl_structs_match_put_execBpf()...");
 
@@ -193,8 +194,8 @@ ofl_structs_match_put_execBpf(struct ofl_match *match, uint32_t header, uint32_t
     // Mask size uint8_t
     memcpy(m->value + sizeof(uint64_t) + sizeof(uint32_t), &mask, sizeof(uint64_t));
 
-    // Param_len size uint8_t
-    uint8_t * param_len_ptr = (m->value + 2* sizeof(uint64_t) + sizeof(uint32_t));
+    param_len_ptr = (m->value + 2* sizeof(uint64_t) + sizeof(uint32_t));
+
     memcpy(param_len_ptr, &param_len, sizeof(uint8_t)); // cpy param_len
     //VLOG_WARN_RL(LOG_MODULE, &rl, "param_len: %i(%i)", *param_len_ptr, param_len_ptr);
 

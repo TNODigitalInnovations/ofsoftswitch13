@@ -45,8 +45,10 @@ ofl_exp_tno_msg_pack(struct ofl_msg_experimenter *msg, uint8_t **buf, size_t *bu
     }
 }
 
+// Given the OpenFlow wire format in converts to an experimenter structure
 ofl_err
-ofl_exp_tno_msg_unpack(struct ofp_header *oh, size_t *len, struct ofl_msg_experimenter **msg) {
+ofl_exp_tno_msg_unpack(struct ofp_header *oh, size_t *len, struct ofl_msg_experimenter **msg)
+{
     struct ofl_exp_tno_msg_header *tno_exp;
 
     struct tno_header *exp;
@@ -86,9 +88,8 @@ ofl_exp_tno_msg_unpack(struct ofp_header *oh, size_t *len, struct ofl_msg_experi
 				src = (struct ofl_tno_bpf_put_header *) exp;
 
 
-
-				dst = (struct ofl_exp_tno_msg_bpf *)
-						malloc(sizeof(struct ofl_exp_tno_msg_bpf));
+				// Malloc here needs to freed somewhere.
+				dst = (struct ofl_exp_tno_msg_bpf *) malloc(sizeof(struct ofl_exp_tno_msg_bpf));
 
                 dst->header.header.experimenter_id = ntohl(exp->vendor);
                 dst->header.type                   = ntohl(exp->subtype);

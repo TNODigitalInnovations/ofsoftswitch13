@@ -544,7 +544,7 @@ parse_oxm_entry(struct ofl_match *match, const struct oxm_field *f,const void *v
             ofl_structs_match_put16m(match, f->header, ntohs(*((uint16_t*) value)),ntohs(*((uint16_t*) mask)));
             return 0;
         case OFI_OXM_OF_ANY_MATCH:{
-            ofl_structs_match_put248(match, f->header, value);
+            //ofl_structs_match_put248(match, f->header, value);
             return 0;
         }
         case OFI_OXM_OF_EXEC_BPF:{
