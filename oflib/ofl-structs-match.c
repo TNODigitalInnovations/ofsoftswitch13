@@ -165,8 +165,15 @@ ofl_structs_match_put248(struct ofl_match *match, uint32_t header, char * value)
 
 }
 
-void
-ofl_structs_match_put_execBpf(struct ofl_match *match, uint32_t header, uint32_t prog_num , uint64_t result,  uint64_t mask, uint8_t param_len, uint8_t * param)
+
+void ofl_structs_match_put_execBpf(
+            struct ofl_match *match,
+            uint32_t header,
+            uint32_t prog_num ,
+            uint64_t result,
+            uint64_t mask,
+            uint8_t  param_len,
+            const uint8_t * param)
 {
     struct ofl_match_tlv *m = malloc(sizeof (struct ofl_match_tlv));
     int len = sizeof(uint32_t) + 2*sizeof(uint64_t) +sizeof(uint8_t) + param_len;

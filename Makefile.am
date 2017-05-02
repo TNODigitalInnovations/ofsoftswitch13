@@ -17,7 +17,7 @@ AM_CPPFLAGS = $(SSL_CFLAGS) -g
 AM_CPPFLAGS += -I $(top_srcdir)/include
 AM_CPPFLAGS += -I $(top_srcdir)/lib
 
-AM_CFLAGS = -Wstrict-prototypes -Werror
+AM_CFLAGS = -Wstrict-prototypes -Wno-maybe-uninitialized -Werror
 
 if NDEBUG
 AM_CPPFLAGS += -DNDEBUG

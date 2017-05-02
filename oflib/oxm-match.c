@@ -549,20 +549,22 @@ parse_oxm_entry(struct ofl_match *match, const struct oxm_field *f,const void *v
         }
         case OFI_OXM_OF_EXEC_BPF:{
 
-            VLOG_WARN_RL(LOG_MODULE, &rl, "GOT OFI_OXM_OF_EXEC_BPF");
+            const uint32_t * prog_num_ptr   = value;
+            const uint64_t * prog_res_ptr   = (const uint64_t *)( ((const uint8_t *)value) + sizeof(uint32_t) );
+            const uint64_t * prog_mask_ptr  = (const uint64_t *)( (const uint8_t *)value + sizeof(uint32_t) + sizeof(uint64_t) );
+            const uint8_t * param_len_ptr   = (const uint8_t *)(  (const uint8_t *)value + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t) );
+            const uint8_t * param           = (const uint8_t *)(  (const uint8_t *)value + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint8_t));
 
-            uint32_t * prog_num_ptr = value;
-            uint64_t * prog_res_ptr = (value + sizeof(uint32_t) );
-            uint64_t * prog_mask_ptr = (value + sizeof(uint32_t) + sizeof(uint64_t) );
-            uint8_t * param_len_ptr    = (value + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t) );
-            uint8_t * param = (value + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint8_t));
 
             uint32_t prog_num = ntohl(*prog_num_ptr);
             uint64_t prog_res = ntoh64(*prog_res_ptr);
             uint64_t prog_mask = ntoh64(*prog_mask_ptr);
             uint8_t param_len = *param_len_ptr;
 
-            VLOG_WARN_RL(LOG_MODULE, &rl, "id: %i(%i), param_len: %i", prog_num, prog_num_ptr, param_len);
+            // Start code.
+            VLOG_WARN_RL(LOG_MODULE, &rl, "GOT OFI_OXM_OF_EXEC_BPF");
+
+            //VLOG_WARN_RL(LOG_MODULE, &rl, "id: %i(%u), param_len: %i", (int)prog_num, prog_num_ptr, (int)param_len);
             //VLOG_WARN_RL(LOG_MODULE, &rl, "id: %i, param_len: %i", prog_num, param_len);
 
             ofl_structs_match_put_execBpf(match, f->header,
@@ -761,12 +763,11 @@ static void oxm_put_bpf(struct ofpbuf *buf, uint32_t header, uint32_t prog_num, 
 }
 
 
-static void
-oxm_put_20(struct ofpbuf *buf, uint32_t header, uint8_t* value)
-{
-    oxm_put_header(buf, header);
-    ofpbuf_put(buf, value, 20);
-}
+//static void oxm_put_20(struct ofpbuf *buf, uint32_t header, uint8_t* value)
+//{
+//    oxm_put_header(buf, header);
+//    ofpbuf_put(buf, value, 20);
+//}
 
 
 static void

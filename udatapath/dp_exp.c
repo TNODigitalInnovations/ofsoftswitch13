@@ -71,14 +71,12 @@ dp_exp_stats(struct datapath *dp UNUSED,
 
 
 ofl_err
-dp_exp_message(struct datapath *dp,
-                                struct ofl_msg_experimenter *msg,
-                               const struct sender *sender) {
+dp_exp_message(struct datapath *dp, struct ofl_msg_experimenter *msg, const struct sender *sender) {
 
     switch (msg->experimenter_id) {
-    	struct ofl_exp_openflow_msg_header *exp = (struct ofl_exp_openflow_msg_header *)msg;
+        struct ofl_exp_openflow_msg_header *exp = (struct ofl_exp_openflow_msg_header *)msg;
 
-    	case (OPENFLOW_VENDOR_ID): {
+        case (OPENFLOW_VENDOR_ID): {
             switch(exp->type) {
                 case (OFP_EXT_QUEUE_MODIFY): {
                     return dp_ports_handle_queue_modify(dp, (struct ofl_exp_openflow_msg_queue *)msg, sender);
@@ -90,12 +88,13 @@ dp_exp_message(struct datapath *dp,
                     return dp_handle_set_desc(dp, (struct ofl_exp_openflow_msg_set_dp_desc *)msg, sender);
                 }
                 default: {
-                	VLOG_WARN_RL(LOG_MODULE, &rl, "Trying to handle unknown experimenter type (%u).", exp->type);
+                    VLOG_WARN_RL(LOG_MODULE, &rl, "Trying to handle unknown experimenter type (%u).", exp->type);
                     return ofl_error(OFPET_BAD_REQUEST, OFPBRC_BAD_EXPERIMENTER);
                 }
             }
             break;
         }
+
        case (TNO_VENDOR_ID): {
             struct ofl_exp_tno_msg_header *exp = (struct ofl_exp_tno_msg_header *)msg;
 
@@ -104,7 +103,7 @@ dp_exp_message(struct datapath *dp,
                     VLOG_WARN_RL(LOG_MODULE, &rl, "TNO PUT BPF !");
 
                     // The msg needs to be freed in this call!
-                    return dp_handle_put_bpf(dp, (struct ofl_exp_tno_msg_bgp *) msg, sender);
+                    return dp_handle_put_bpf(dp, (struct ofl_exp_tno_msg_bpf *) msg, sender);
                 }
                 case (TNO_GET_BPF): {
                     VLOG_WARN_RL(LOG_MODULE, &rl, "TNO GET BPF !");
@@ -127,3 +126,4 @@ dp_exp_message(struct datapath *dp,
         }
     }
 }
+

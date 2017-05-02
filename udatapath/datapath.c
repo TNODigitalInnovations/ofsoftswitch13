@@ -691,6 +691,15 @@ dp_handle_async_request(struct datapath *dp, struct ofl_msg_async_config *msg,
 /* TNO extenstions */
 ofl_err dp_handle_put_bpf(struct datapath *dp, struct ofl_exp_tno_msg_bpf *msg, const struct sender *sender)
 {
+    // Create a pointer to the correct program_struct.
+    struct dp_bpf_program * program_struct = &dp->bpf_programs[msg->prog_id];
+    uint8_t * bpf_program;
+    struct ubpf_vm *ubpfvm;
+
+
+    // Start code ---
+    (void)sender;
+
     VLOG_WARN_RL(LOG_MODULE, &rl, "Save eBPF program to datapath, program id=(%u).", msg->prog_id);
 
     if (msg->prog_id < 0 || msg->prog_id > 255)
@@ -699,20 +708,19 @@ ofl_err dp_handle_put_bpf(struct datapath *dp, struct ofl_exp_tno_msg_bpf *msg, 
         return ofl_error(OFPET_BAD_REQUEST, OFPBRC_BAD_EXPERIMENTER);
     }
 
-    // Create a pointer to the correct program_struct.
-    struct dp_bpf_program * program_struct = &dp->bpf_programs[msg->prog_id];
+
 
     // Fill with the correct info.
     program_struct->number = msg->prog_id;
     program_struct->len = msg->prog_len;
 
     // Malloc and copy the program from the message.
-    uint8_t * bpf_program = malloc( program_struct->len * sizeof(uint8_t) );
+    bpf_program = malloc( program_struct->len * sizeof(uint8_t) );
     memcpy(bpf_program, msg->program, program_struct->len * sizeof(uint8_t) );
     program_struct->program = bpf_program;
 
     /* Create a pointer to a uBPF VM, do this per program */
-    struct ubpf_vm *ubpfvm = ubpf_create();
+    ubpfvm = ubpf_create();
     if (!ubpfvm) {
             VLOG_WARN_RL(LOG_MODULE, &rl, "Failed to create eBPF vm");
             return false;

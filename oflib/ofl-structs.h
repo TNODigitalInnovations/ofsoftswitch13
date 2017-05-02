@@ -235,12 +235,12 @@ struct ofl_match {
 };
 
 
-struct bpf_insn {
-    uint16_t filter;	/* Actual filter */
-    uint8_t jt; 	/* Jump true */
-    uint8_t jf; 	/* Jump false */
-    uint32_t k; 	/* Generic multiuse field */
-};
+//struct bpf_insn {
+//    uint16_t filter;	/* Actual filter */
+//    uint8_t jt; 	/* Jump true */
+//    uint8_t jf; 	/* Jump false */
+//    uint32_t k; 	/* Generic multiuse field */
+//};
 
 struct ofl_match_tlv{
     struct hmap_node hmap_node;
@@ -472,7 +472,8 @@ void
 ofl_structs_match_put248(struct ofl_match *match, uint32_t header, char * value);
 
 void
-ofl_structs_match_put_execBpf(struct ofl_match *match, uint32_t header, uint32_t prog_num , uint64_t result,  uint64_t mask, uint8_t param_len, uint8_t * param);
+ofl_structs_match_put_execBpf(struct ofl_match *match, uint32_t header, uint32_t prog_num ,
+        uint64_t result,  uint64_t mask, uint8_t param_len, const uint8_t * param);
 
 #ifdef __cplusplus
 }

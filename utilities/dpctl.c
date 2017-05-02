@@ -618,6 +618,7 @@ flow_mod(struct vconn *vconn, int argc, char *argv[]) {
     if (argc > 1) {
         size_t i, j;
         size_t inst_num = 0;
+        j = 0;
         if (argc > 2){
             inst_num = argc - 2;
             j = 2;

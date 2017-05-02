@@ -22,25 +22,30 @@ OFL_LOG_INIT(LOG_MODULE)
 
 int
 ofl_exp_tno_msg_pack(struct ofl_msg_experimenter *msg, uint8_t **buf, size_t *buf_len) {
+    (void) buf;
+    (void) buf_len;
+
     if (msg->experimenter_id == TNO_VENDOR_ID) {
+
         struct ofl_exp_tno_msg_header *exp = (struct ofl_exp_tno_msg_header *)msg;
+
         switch (exp->type) {
             case (TNO_PUT_BPF): {
-				OFL_LOG_WARN(LOG_MODULE, "Trying to print unknown TNO Experimenter message.");
+				OFL_LOG_WARN(LOG_MODULE, "Trying to pack TNO Experimenter message.");
             	return -1; }
             case (TNO_DEL_BPF): {
-				OFL_LOG_WARN(LOG_MODULE, "Trying to print unknown TNO Experimenter message.");
+                OFL_LOG_WARN(LOG_MODULE, "Trying to pack TNO Experimenter message.");
             	return -1; }
             case (TNO_GET_BPF): {
-				OFL_LOG_WARN(LOG_MODULE, "Trying to print unknown TNO Experimenter message.");
+                OFL_LOG_WARN(LOG_MODULE, "Trying to pack TNO Experimenter message.");
             	return -1; }
             default: {
-                OFL_LOG_WARN(LOG_MODULE, "Trying to print unknown TNO Experimenter message.");
+                OFL_LOG_WARN(LOG_MODULE, "Trying to pack TNO Experimenter message.");
                 return -1;
             }
         }
     } else {
-        OFL_LOG_WARN(LOG_MODULE, "Trying to print non-TNO Experimenter message.");
+        OFL_LOG_WARN(LOG_MODULE, "Trying to pack non-TNO Experimenter message.");
         return -1;
     }
 }
@@ -49,21 +54,16 @@ ofl_exp_tno_msg_pack(struct ofl_msg_experimenter *msg, uint8_t **buf, size_t *bu
 ofl_err
 ofl_exp_tno_msg_unpack(struct ofp_header *oh, size_t *len, struct ofl_msg_experimenter **msg)
 {
-    struct ofl_exp_tno_msg_header *tno_exp;
-
     struct tno_header *exp;
     struct ofl_tno_bpf_put_header *src;
     struct ofl_exp_tno_msg_bpf *dst;
-    ofl_err error;
 
     if (*len < sizeof(struct ofl_exp_tno_msg_header)) {
         OFL_LOG_WARN(LOG_MODULE, "Received EXPERIMENTER message has invalid length (%zu).", *len);
         return ofl_error(OFPET_BAD_REQUEST, OFPBRC_BAD_LEN);
     }
 
-
     exp = (struct tno_header *)oh;
-    tno_exp = (struct ofl_exp_tno_msg_header *)oh;
 
     if (ntohl(exp->vendor) == TNO_VENDOR_ID) {
 
@@ -97,13 +97,12 @@ ofl_exp_tno_msg_unpack(struct ofp_header *oh, size_t *len, struct ofl_msg_experi
 				dst->prog_len = ntohl(src->prog_len);
 
 
-				OFL_LOG_WARN(LOG_MODULE,"Received TNO_PUT_BPF message prog_id: (%zu).",dst->prog_id);
-				OFL_LOG_WARN(LOG_MODULE,"Received TNO_PUT_BPF message prog_len: (%zu).",dst->prog_len);
+				OFL_LOG_WARN(LOG_MODULE,"Received TNO_PUT_BPF message prog_id: (%u).",dst->prog_id);
+				OFL_LOG_WARN(LOG_MODULE,"Received TNO_PUT_BPF message prog_len: (%u).",dst->prog_len);
 
 				if (dst->prog_len != *len)
 				{
-					OFL_LOG_WARN(LOG_MODULE,
-							"Received TNO_PUT_BPF message has invalid payload length left: (%zu). msg: (%zu).",
+					OFL_LOG_WARN(LOG_MODULE, "Received TNO_PUT_BPF message has invalid payload length left: (%zu). msg: (%u).",
 							*len, dst->prog_len );
 					return ofl_error(OFPET_BAD_REQUEST, OFPBRC_BAD_LEN);
 				}

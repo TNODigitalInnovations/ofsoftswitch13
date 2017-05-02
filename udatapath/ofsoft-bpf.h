@@ -11,19 +11,15 @@
 #include <stdint.h>
 
 struct ofsoft_bpf {
-	// Ofsoftswitch13 metadata
-	uint8_t             table_id;
-	uint32_t            in_port;
-
-	// Match parameter
-	uint8_t				param_len;
-
-	// Packet
-	size_t			packet_len;
-
-	uint8_t * 		param;
-	uint8_t * 		packet;
-
+    // Ofsoftswitch13 metadata
+    uint8_t     table_id;
+    uint32_t    in_port;
+    //
+    uint8_t     param_len;
+    // Packet
+    size_t      packet_len;
+    uint8_t *   param;
+    uint8_t *   packet;
 };
 
 
