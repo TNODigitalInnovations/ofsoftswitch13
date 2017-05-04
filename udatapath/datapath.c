@@ -150,7 +150,7 @@ dp_new(void) {
     dp->local_port = NULL;
 
     dp->buffers = dp_buffers_create(dp);
-    dp->pipeline = pipeline_create(dp);
+    dp->pipeline = pipeline_create(dp);  // this create memory leaks.
     dp->groups = group_table_create(dp);
     dp->meters = meter_table_create(dp);
 

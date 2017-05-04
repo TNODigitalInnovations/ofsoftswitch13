@@ -271,13 +271,13 @@ bool exec_ebpf(struct datapath * dp, struct ofl_match_tlv *ofl_match_tlv, uint32
 
     // ---Start code ---
     (void)ofl_match_tlv;
-    VLOG_INFO_RL(LOG_MODULE, &rl, "Execute eBPF program.");
+    //VLOG_INFO_RL(LOG_MODULE, &rl, "Execute eBPF program.");
 
     // Execute with total length of param, the struct, param and packet buffers.
     size =  sizeof(struct ofsoft_bpf) + param->param_len + param->packet_len;
     ret = ubpf_exec(vm, param, size);
 
-    VLOG_WARN_RL(LOG_MODULE, &rl, "EBPF return val: \"0x%"PRIx64"\"", ret);
+    //VLOG_INFO_RL(LOG_MODULE, &rl, "EBPF return val: \"0x%"PRIx64"\"", ret);
 
     return match_mask64((uint8_t*)&ret, (uint8_t*)&mask, (uint8_t*)&result);
 }
@@ -336,6 +336,7 @@ packet_match(struct flow_table * table, struct ofl_match *flow_match, struct pac
             uint8_t * param_offset = NULL;
             uint8_t * packet_offset;
             int i = 0;
+            size_t total_size = 0;
 
             // Convenience pointers (should make a struct for this)
             uint32_t * prog_num_ptr  = (uint32_t *) f->value;
@@ -344,52 +345,52 @@ packet_match(struct flow_table * table, struct ofl_match *flow_match, struct pac
             uint8_t * param_len_ptr  = (uint8_t *) (f->value + sizeof(uint32_t) + 2*sizeof(uint64_t));
             uint8_t * param          = (uint8_t *) (f->value + sizeof(uint32_t) + 2*sizeof(uint64_t) + sizeof(uint8_t));
 
-            bpf_param = (struct ofsoft_bpf *) malloc(sizeof(struct ofsoft_bpf) + *param_len_ptr + fullpacket->buffer->size);
+            // Byte size of complete structure. (struct, param, packet)
+            total_size = sizeof(struct ofsoft_bpf) + *param_len_ptr + fullpacket->buffer->size;
 
+            // Allocate memory for this complete structure.
+            bpf_param = (struct ofsoft_bpf *)malloc(total_size);
+
+            // Initilize complete structure wit 0xFE balues for each byte... WHY?
             ptr = (uint8_t *)bpf_param;
-            for (i = 0; i < ( sizeof(struct ofsoft_bpf) + *param_len_ptr + fullpacket->buffer->size ) ; i++ )
-            {
+            for (i = 0; i<total_size ; i++ ) {
                 *ptr = 0xFE;
                 ptr++;
             }
 
-            //Metadata
+            // Metadata... WHY memcpy ?
             memcpy(&bpf_param->in_port, &fullpacket->in_port, sizeof(uint32_t));
             memcpy(&bpf_param->table_id, &fullpacket->table_id, sizeof(uint8_t));
 
-            //Parameter length
+            // Parameter length.
             memcpy(&bpf_param->param_len, param_len_ptr, sizeof(uint8_t));
 
-            //Copy parameters just after the struct
+            // Copy parameters just after the struct.
             param_offset = (uint8_t* )bpf_param + sizeof(struct ofsoft_bpf);
+            // Copy the pointer also to the struct member param.
+            bpf_param->param = param_offset;
             memcpy(param_offset, param, *param_len_ptr);
 
-            //Copy the pointer
-            //memcpy(&bpf_param->param, &param_offset, sizeof(uint8_t *));
-            bpf_param->param = (uint8_t *)bpf_param + sizeof(struct ofsoft_bpf);
-
-
-            //Copy packet length
+            // Copy packet length.
             memcpy(&bpf_param->packet_len,&fullpacket->buffer->size, sizeof(size_t));
 
-            //Copy packet afther the parameter
+            //Copy packet after the parameter.
             packet_offset = (uint8_t* )bpf_param + sizeof(struct ofsoft_bpf) + *param_len_ptr;
-            memcpy(packet_offset, fullpacket->buffer->data, fullpacket->buffer->size);
+            bpf_param->packet = packet_offset;
+            memcpy(packet_offset, fullpacket->buffer->data, fullpacket->buffer->size); // <-- this is expensive.
 
-            //Copy packet offset pointer
-            //memcpy(&bpf_param->packet, &packet_offset, sizeof(uint8_t* ));
+            // Match result
+            match_result = exec_ebpf(table->dp, f, *prog_num_ptr, *prog_res_ptr, *prog_mask_ptr, bpf_param);
 
-            bpf_param->packet = (uint8_t *)bpf_param + sizeof(struct ofsoft_bpf) + *param_len_ptr;
+            // Free the malloc() of bpf_param here. it is not needed anymore.
+            free(bpf_param);
 
-            match_result = exec_ebpf(table->dp,f,*prog_num_ptr,*prog_res_ptr,*prog_mask_ptr, bpf_param);
-
-            //free(bpf_param);
             if (match_result == false){
                 return false;
             } else {
                 continue;
             }
-        }// END HMAP for each
+        }// f->header==OXM_OF_EXEC_BPF
 
         if (has_mask) {
             /* Clear the has_mask bit and divide the field_len by two in the packet field header */
@@ -525,7 +526,8 @@ packet_match(struct flow_table * table, struct ofl_match *flow_match, struct pac
                 /* Should never happen */
                 break;
         }
-    }
+    } // END HMAP for each.
+
     /* If we get here, all match fields in the flow entry matched the packet */
     return true;
 }
@@ -600,15 +602,15 @@ strict_mask128(uint8_t *a, uint8_t *b, uint8_t *am, uint8_t *bm) {
  */
 static inline bool match_ebpf_flow(uint8_t *a, uint8_t *b)
 {
-    uint8_t *a_prog_id        = a;
-    uint8_t *a_result         = a_prog_id + sizeof(uint32_t);
+    uint8_t *a_prog_id      = a;
+    uint8_t *a_result       = a_prog_id + sizeof(uint32_t);
     uint8_t *a_mask         = a_result + sizeof(uint64_t);
-    uint8_t *a_param_len     = a_mask + sizeof(uint64_t);
-    uint8_t *a_param         = a_param_len + sizeof(uint8_t);
+    uint8_t *a_param_len    = a_mask + sizeof(uint64_t);
+    uint8_t *a_param        = a_param_len + sizeof(uint8_t);
 
-    uint8_t *b_prog_id        = b;
-    uint8_t *b_result         = b_prog_id + sizeof(uint32_t);
-    uint8_t *b_mask         = b_result + sizeof(uint64_t);
+    uint8_t *b_prog_id       = b;
+    uint8_t *b_result        = b_prog_id + sizeof(uint32_t);
+    uint8_t *b_mask          = b_result + sizeof(uint64_t);
     uint8_t *b_param_len     = b_mask + sizeof(uint64_t);
     uint8_t *b_param         = b_param_len + sizeof(uint8_t);
 
