@@ -11,40 +11,44 @@
 #include "../oflib/ofl-structs.h"
 #include "../oflib/ofl-messages.h"
 
+/**
+ * OFP headers and structs
+ */
+struct ofp_tno_header {
+    struct ofp_header header;  //  8 bytes
+    uint32_t vendor;            /* NX_VENDOR_ID. */
+    uint32_t subtype;           /* Action, PUT, DEL or something*/
+};
+OFP_ASSERT(sizeof(struct ofp_tno_header) == 16);
+
+struct ofp_tno_header_bpf {
+    struct ofp_tno_header header; // 16 bytes
+    uint32_t prog_id;
+    uint32_t prog_len;            // +8 bytes = 24 bytes
+    uint8_t program[0];           // +0 bytes = 24 bytes.
+}; //  24 bytes.
+OFP_ASSERT(sizeof(struct ofp_tno_header_bpf) == 24);
 
 /**
- * struct ofl_msg_experimenter {
- *   struct ofl_msg_header  header;             // OFPT_EXPERIMENTER
- *   uint32_t               experimenter_id;
- * };
+ * OFL headers headers and structs
  */
-struct ofl_exp_tno_msg_header {
-    struct ofl_msg_experimenter header; /* NX_VENDOR_ID */
-    uint32_t   type;
-};
+struct ofl_msg_exp_tno_header {
+    struct ofl_msg_experimenter header; // enum , 32 bits
+    uint32_t   type;                    // 32 bits
+}; // x + 8 bytes
+//OFP_ASSERT(sizeof(struct ofp_tno_header_bpf) == 24);
 
-struct tno_header {
-    struct ofp_header header;
-    uint32_t vendor;            /* NX_VENDOR_ID. */
-    uint32_t subtype;           /* One of NXT_* above. */
-};
-
-struct ofl_exp_tno_msg_bpf {
-    struct ofl_exp_tno_msg_header   header;
-    uint32_t                  		prog_id;
-    uint32_t						prog_len;
-    uint8_t * 						program;
-};
-
-struct ofl_tno_bpf_put_header {
-    struct tno_header header;
+struct ofl_msg_exp_tno_header_bpf {
+    struct ofl_msg_exp_tno_header   header; //enum ,+8 bytes
     uint32_t prog_id;
-    uint32_t prog_len;
-    uint8_t program[0];
-};
+    uint32_t prog_len;                      // + 8 bytes = 16 bytes
+    uint8_t *program;
+}; // 17 bytes
+
+
 
 struct ofl_exp_tno_msg_del_bpf {
-    struct ofl_exp_tno_msg_header   header;
+    struct ofl_msg_exp_tno_header   header;
     uint32_t                  		prog_id;
 };
 

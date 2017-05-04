@@ -32,7 +32,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
-#include <pcap/bpf.h>
 #include "lib/hash.h"
 #include "oflib/oxm-match.h"
 #include "match_std.h"
@@ -256,54 +255,29 @@ bool exec_ebpf(struct datapath * dp, struct ofl_match_tlv *ofl_match_tlv, struct
     return false;
 } */
 
+
+/**
+ * This is executed every time a packet comes in.
+ */
 bool exec_ebpf(struct datapath * dp, struct ofl_match_tlv *ofl_match_tlv, uint32_t prognum, uint64_t result, uint64_t mask, struct ofsoft_bpf *param)
 {
-    //TODO TNO: add this to the bpf_program struct and create the VM upon addition of the program instead of per packet !
-    //struct ubpf_vm *vm = ubpf_create();
-    /*if (!vm) {
-        VLOG_WARN_RL(LOG_MODULE, &rl, "Failed to create eBPF vm");
-        return false;
-    }*/
-
-    /* Get VM pointer from struct */
+    // Get VM pointer from struct.
     struct ubpf_vm *vm = dp->bpf_programs[prognum].vm;
 
-    struct bpf_insn *instructions = (struct bpf_insn *) (dp->bpf_programs[prognum].program);
-    uint32_t prg_len = dp->bpf_programs[prognum].len;
-    char *errmsg;
-    int rv;
+    // Get pointer toeBPF elf (bin blop)
     uint64_t ret;
     size_t size;
 
 
-    // Start code ---
+    // ---Start code ---
     (void)ofl_match_tlv;
-    VLOG_WARN_RL(LOG_MODULE, &rl, "Execute eBPF program.");
-    VLOG_WARN_RL(LOG_MODULE, &rl, "Loading eBPF prog (%d)", prognum);
+    VLOG_INFO_RL(LOG_MODULE, &rl, "Execute eBPF program.");
 
-
-    //rv = ubpf_load(vm,instructions,prg_len, &errmsg);
-
-    rv = ubpf_load_elf(vm,instructions,prg_len, &errmsg);
-
-    if (rv < 0)
-    {
-        VLOG_WARN_RL(LOG_MODULE, &rl, "Failed to load eBPF program (%s)", errmsg);
-        free(errmsg);
-        //ubpf_destroy(vm);
-        return false;
-
-    }
-
-
-    //Execute with total length of param, the struct, param and packet buffers.
+    // Execute with total length of param, the struct, param and packet buffers.
     size =  sizeof(struct ofsoft_bpf) + param->param_len + param->packet_len;
     ret = ubpf_exec(vm, param, size);
 
-    //ubpf_destroy(vm);
-
     VLOG_WARN_RL(LOG_MODULE, &rl, "EBPF return val: \"0x%"PRIx64"\"", ret);
-
 
     return match_mask64((uint8_t*)&ret, (uint8_t*)&mask, (uint8_t*)&result);
 }

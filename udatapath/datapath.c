@@ -286,8 +286,9 @@ remote_rconn_run(struct datapath *dp, struct remote *r, uint8_t conn_id) {
 
                 if (!error) {
                     error = handle_control_msg(dp, msg, &sender);
-
+                    // If error == zero, then there was no error. and freeing has to be done by the handler.
                     if (error) {
+                        VLOG_WARN_RL(LOG_MODULE, &rl, "Handler returned an error value so it should free the OFL message now.");
                         ofl_msg_free(msg, dp->exp);
                     }
                 }
@@ -372,7 +373,23 @@ remote_create(struct datapath *dp, struct rconn *rconn, struct rconn *rconn_aux)
         memset(&remote->config.port_status_mask[i], 0x7, sizeof(uint32_t));
         memset(&remote->config.flow_removed_mask[i], 0x1f, sizeof(uint32_t));
     }
+    VLOG_INFO_RL(LOG_MODULE, &rl, "Setting whole bpf list to zero for sure!");
+    zero_bpf_prog_list(dp);
+
     return remote;
+}
+
+void zero_bpf_prog_list(struct datapath *dp){
+    int size = 0;
+    int i = 0;
+    size = sizeof(dp->bpf_programs)/sizeof(dp->bpf_programs[1]);
+
+    for(i=0; i<size; i++){
+        dp->bpf_programs[i].number = 0;
+        dp->bpf_programs[i].vm = NULL;
+        dp->bpf_programs[i].len = 0;
+        dp->bpf_programs[i].program = NULL;
+    }
 }
 
 
@@ -689,37 +706,47 @@ dp_handle_async_request(struct datapath *dp, struct ofl_msg_async_config *msg,
 }
 
 /* TNO extenstions */
-ofl_err dp_handle_put_bpf(struct datapath *dp, struct ofl_exp_tno_msg_bpf *msg, const struct sender *sender)
+ofl_err dp_handle_put_bpf(struct datapath *dp, struct ofl_msg_exp_tno_header_bpf *msg, const struct sender *sender)
 {
     // Create a pointer to the correct program_struct.
-    struct dp_bpf_program * program_struct = &dp->bpf_programs[msg->prog_id];
+    struct dp_bpf_program * program_struct;
     uint8_t * bpf_program;
-    struct ubpf_vm *ubpfvm;
+    struct ubpf_vm * ubpfvm;
+    char *errmsg;
+    int result;
 
+    // --- Start code ---
 
-    // Start code ---
+    // Cast sender to void, to disable the unused warning. We do not use the sender parameter.
     (void)sender;
-
     VLOG_WARN_RL(LOG_MODULE, &rl, "Save eBPF program to datapath, program id=(%u).", msg->prog_id);
 
-    if (msg->prog_id < 0 || msg->prog_id > 255)
-    {
+    // Point to the correct struct according to the program id.
+    if (msg->prog_id < 0 || msg->prog_id > 255) {
         VLOG_WARN_RL(LOG_MODULE, &rl, "Unsupported program index: (%u).", msg->prog_id);
         return ofl_error(OFPET_BAD_REQUEST, OFPBRC_BAD_EXPERIMENTER);
     }
-
-
+    program_struct = &dp->bpf_programs[msg->prog_id];
 
     // Fill with the correct info.
     program_struct->number = msg->prog_id;
-    program_struct->len = msg->prog_len;
+    program_struct->len    = msg->prog_len;
 
     // Malloc and copy the program from the message.
+    // Free first to ensure freeing when overwriting.
+    if (program_struct->program != NULL) {
+        free(program_struct->program);
+    }
     bpf_program = malloc( program_struct->len * sizeof(uint8_t) );
     memcpy(bpf_program, msg->program, program_struct->len * sizeof(uint8_t) );
     program_struct->program = bpf_program;
 
-    /* Create a pointer to a uBPF VM, do this per program */
+    // Create a pointer to a uBPF VM, do this per program.
+    // Free first to ensure freeing when overwriting.
+    if (program_struct->vm != NULL) {
+        ubpf_destroy(program_struct->vm);
+        free(program_struct->vm);
+    }
     ubpfvm = ubpf_create();
     if (!ubpfvm) {
             VLOG_WARN_RL(LOG_MODULE, &rl, "Failed to create eBPF vm");
@@ -727,12 +754,20 @@ ofl_err dp_handle_put_bpf(struct datapath *dp, struct ofl_exp_tno_msg_bpf *msg, 
     }
     program_struct->vm = ubpfvm;
 
-    VLOG_WARN_RL(LOG_MODULE, &rl, "eBPF Program size: (%u).", program_struct->len );
+    // Lets already load the code in the VM.
+    result = ubpf_load_elf(ubpfvm, (const void*)bpf_program, program_struct->len, &errmsg);
+    if (result < 0) {
+        VLOG_ERR_RL(LOG_MODULE, &rl, "Failed to load eBPF program (%s)", errmsg);
+        free(errmsg);
+        return 1;
+    }
+    VLOG_INFO_RL(LOG_MODULE, &rl, "eBPF vm loaded with elf program.");
+
+    // Done, everything is put in the bpf_programs struct.
 
     // Free msg!
-    ofl_msg_free( (struct ofl_msg_header *)msg, dp->exp);
     // This function will in the end call ofl_exp_tno_msg_free(struct ofl_msg_experimenter *msg); from ofl-exp-tno.h
-
+    ofl_msg_free( (struct ofl_msg_header *)msg, dp->exp);
     return 0;
 }
 

@@ -96,14 +96,14 @@ dp_exp_message(struct datapath *dp, struct ofl_msg_experimenter *msg, const stru
         }
 
        case (TNO_VENDOR_ID): {
-            struct ofl_exp_tno_msg_header *exp = (struct ofl_exp_tno_msg_header *)msg;
+            struct ofl_msg_exp_tno_header *exp = (struct ofl_msg_exp_tno_header *)msg;
 
             switch(exp->type) {
                 case (TNO_PUT_BPF): {
-                    VLOG_WARN_RL(LOG_MODULE, &rl, "TNO PUT BPF !");
+                    VLOG_WARN_RL(LOG_MODULE, &rl, "TNO PUT BPF in datapath!");
 
                     // The msg needs to be freed in this call!
-                    return dp_handle_put_bpf(dp, (struct ofl_exp_tno_msg_bpf *) msg, sender);
+                    return dp_handle_put_bpf(dp, (struct ofl_msg_exp_tno_header_bpf *) msg, sender);
                 }
                 case (TNO_GET_BPF): {
                     VLOG_WARN_RL(LOG_MODULE, &rl, "TNO GET BPF !");

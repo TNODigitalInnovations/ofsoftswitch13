@@ -93,13 +93,8 @@ struct datapath {
     size_t n_listeners_aux;
     
     /* Bpf programs */
-    //struct list bpf_programs;
-
     struct dp_bpf_program bpf_programs[256];
     size_t n_bpf_progs;
-
-
-
 
     time_t last_timeout;
 
@@ -233,10 +228,12 @@ ofl_err
 dp_handle_async_request(struct datapath *dp, struct ofl_msg_async_config *msg,
                                             const struct sender *sender);
 
+/* make sure the list of BPF programms in insitlized with a value. */
+void zero_bpf_prog_list(struct datapath *dp);
 
 /* Handle BPF programs */
 ofl_err
-dp_handle_put_bpf(struct datapath *dp, struct ofl_exp_tno_msg_bpf *msg,
+dp_handle_put_bpf(struct datapath *dp, struct ofl_msg_exp_tno_header_bpf *msg,
                                             const struct sender *sender);
 
 

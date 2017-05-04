@@ -33,6 +33,8 @@
 #define MATCH_EXT_H 1
 
 #include <stdbool.h>
+#include <pcap/bpf.h>
+//#include <pcap.h>
 #include "packet.h"
 #include "oflib/ofl-structs.h"
 #include "flow_table.h"
