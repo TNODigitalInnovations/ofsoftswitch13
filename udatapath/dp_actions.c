@@ -76,13 +76,13 @@ revalidation is not needed  */
 static void
 set_field(struct packet *pkt, struct ofl_action_set_field *act )
 {
-    printf("set_field\n");
+    VLOG_DBG_RL(LOG_MODULE, &rl, "set_field()");
     packet_handle_std_validate(pkt->handle_std);
     if (pkt->handle_std->valid)
     {
         /*Field existence is guaranteed by the
         field pre-requisite on matching */
-        fprintf(stderr, "Header %d\n", OXM_FIELD(act->field->header));
+        VLOG_DBG_RL(LOG_MODULE, &rl, "header: %d", OXM_FIELD(act->field->header) );
         switch(act->field->header){
             case OXM_OF_ETH_DST:{
                 memcpy(pkt->handle_std->proto->eth->eth_dst,
@@ -429,7 +429,7 @@ set_field(struct packet *pkt, struct ofl_action_set_field *act )
                 {
                     //struct bpf_insn **any_match = (struct bpf_insn *)f->value;
                     for (i=0; i<10; i++){
-                        printf("any_match %d - %02x\n", i, act->field->value[i]);
+                        VLOG_DBG_RL(LOG_MODULE, &rl, "OXM_OF_ANY_MATCH value[%d]: %02x\n",  i, act->field->value[i]);
                     }
                 }
                 break;

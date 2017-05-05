@@ -382,7 +382,7 @@ packet_match(struct flow_table * table, struct ofl_match *flow_match, struct pac
             // Match result
             match_result = exec_ebpf(table->dp, f, *prog_num_ptr, *prog_res_ptr, *prog_mask_ptr, bpf_param);
 
-            // Free the malloc() of bpf_param here. it is not needed anymore.
+            // Free the malloc() of bpf_param here. It is not needed anymore.
             free(bpf_param);
 
             if (match_result == false){
@@ -390,7 +390,7 @@ packet_match(struct flow_table * table, struct ofl_match *flow_match, struct pac
             } else {
                 continue;
             }
-        }// f->header==OXM_OF_EXEC_BPF
+        }// end if(f->header==OXM_OF_EXEC_BPF)
 
         if (has_mask) {
             /* Clear the has_mask bit and divide the field_len by two in the packet field header */
